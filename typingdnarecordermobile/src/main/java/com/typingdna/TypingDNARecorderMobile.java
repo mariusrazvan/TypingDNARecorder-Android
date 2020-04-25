@@ -27,6 +27,35 @@
  * tdna.reset(); // restarts the recording anytime, clears history stack and starts from scratch (returns nothing)
  */
 
+/**
+ * TypingDNA - Typing Biometrics Recorder for Android
+ * https://www.typingdna.com
+ *
+ * @version 3.1
+ * @author Raul Popa & Stefan Endres
+ * @copyright TypingDNA Inc. https://www.typingdna.com
+ * @license http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * <p>
+ * Typical usage:
+ * TypingDNARecorderMobile tdna = new TypingDNARecorderMobile(this); // creates a new TypingDNA object and starts recording
+ * String typingPattern = tdna.getTypingPattern(type, length, text, textId, targetId, caseSensitive);
+ * <p>
+ * Optional:
+ * tdna.stop(); // ends recording and clears history stack (returns recording flag: false)
+ * tdna.start(); // restarts the recording after a stop (returns recording flag: true)
+ * tdna.reset(); // restarts the recording anytime, clears history stack and starts from scratch (returns nothing)
+ */
+
 package com.typingdna;
 
 import android.app.Activity;
@@ -60,8 +89,8 @@ import java.util.TimerTask;
 public class TypingDNARecorderMobile extends TypingDNARecorderBase implements SensorEventListener {
     private TypingDNAOverlayService typingDNAOverlayService;
     private static Activity mActivity;
-    TypingDNARecorderMobile self;
-    private Boolean mServiceIsBound;
+    private TypingDNARecorderMobile self;
+    private boolean mServiceIsBound;
     private static KeyCharacterMap mKeyCharacterMap;
     private int lastPressTime;
     private int lastReleaseTime;
@@ -79,14 +108,12 @@ public class TypingDNARecorderMobile extends TypingDNARecorderBase implements Se
     private static ArrayList<Integer> gyroscopeYVector = new ArrayList<Integer>();
     private static ArrayList<Integer> gyroscopeXVector = new ArrayList<Integer>();
     private static ArrayList<Integer> sensorEventTsVector = new ArrayList<Integer>();
-    private Boolean recordSensors = true;
+    private boolean recordSensors = true;
     private Timer sensorSampler;
     private static int sampleSize = 21;
     private ServiceConnection mServiceConnection;
-    private static byte samplingInterval = 16;
-    private Boolean pressCalculated = false;
-    private Boolean pressWorks = false;
-    private static Boolean overlayEnabled = true;
+    private boolean pressCalculated = false;
+    private boolean pressWorks = false;
     private static final int[] keyCodes = new int[]{29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44,
             45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 62, 75, 120, 67, 74, 70, 124, 259, 7, 8, 9, 10, 11, 12, 13, 14, 15,
             16};
@@ -278,8 +305,8 @@ public class TypingDNARecorderMobile extends TypingDNARecorderBase implements Se
     }
 
     public void addTarget(int[] targetIds) {
-        for (int i = 0; i < targetIds.length; i++) {
-            addTarget(targetIds[i]);
+        for (int targetId : targetIds) {
+            addTarget(targetId);
         }
     }
 
@@ -288,8 +315,8 @@ public class TypingDNARecorderMobile extends TypingDNARecorderBase implements Se
     }
 
     public void removeTarget(int[] targetIds) {
-        for (int i = 0; i < targetIds.length; i++) {
-            removeTarget(targetIds[i]);
+        for (int targetId : targetIds) {
+            removeTarget(targetId);
         }
     }
 
@@ -317,14 +344,14 @@ public class TypingDNARecorderMobile extends TypingDNARecorderBase implements Se
         int seekTime = (int) (ut1 - t0);
         int downTime = (int) kpGet[0];
         int pressTime = (downTime != 0) ? (int) (ut1 - downTime) : 0;
-        if (recording == true && !modifiers) {
+        if (recording && !modifiers) {
             if (keyCodesObj[keyCode] == 1) {
                 int[] arr = new int[]{keyCode, seekTime, pressTime, prevKeyCode, ut1, target};
                 historyAdd(arr);
                 prevKeyCode = keyCode;
             }
         }
-        if (diagramRecording == true) {
+        if (diagramRecording) {
             String kp0 = (String) kpGet[1];
             String kp1 = (String) kpGet[2];
             String kp2 = (String) kpGet[3];
@@ -354,7 +381,7 @@ public class TypingDNARecorderMobile extends TypingDNARecorderBase implements Se
                                     keycode = events[0].getKeyCode();
                                 }
                             }
-                            Boolean modifiers = false; // ignore modifiers for mobile (works with modifiers too but useless)
+                            boolean modifiers = false; // ignore modifiers for mobile (works with modifiers too but useless)
                             String xy = lastPressX.toString() + "," + lastPressY.toString();
                             mobileKeyReleased(keycode, arg0.charAt(arg1 + arg2), modifiers, time, _et.getId(), kpGet, xy);
                         }
@@ -485,7 +512,7 @@ public class TypingDNARecorderMobile extends TypingDNARecorderBase implements Se
 
             int returnVal = (lastPressTime >= last2ReleaseTime) ? lastPressTime : 0;
 
-            if (pressWorks == false) {
+            if (!pressWorks) {
                 Integer[] kpPos = concat(kpxPos, kpyPos);
                 Arrays.sort(kpPos);
                 List<Integer> kpxyPos = new ArrayList<Integer>();
@@ -563,6 +590,7 @@ public class TypingDNARecorderMobile extends TypingDNARecorderBase implements Se
     private void startSensorSampler() {
         if (sensorSampler == null) {
             sensorSampler = new Timer();
+            byte samplingInterval = 16;
             sensorSampler.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
@@ -637,7 +665,7 @@ public class TypingDNARecorderMobile extends TypingDNARecorderBase implements Se
     }
 
     public void startOverlayService() {
-        if (!overlayEnabled || !checkOverlayPermission()) {
+        if (!checkOverlayPermission()) {
             return;
         }
         try {
@@ -660,7 +688,7 @@ public class TypingDNARecorderMobile extends TypingDNARecorderBase implements Se
                 mServiceIsBound = false;
             }
         } catch (Exception e) {
-            Log.e("TypingDNARecorder", "UndindService Error" + e.getMessage());
+            Log.e("TypingDNARecorder", "UnbindService Error" + e.getMessage());
         }
     }
 
